@@ -1,0 +1,43 @@
+{
+    "manifest_version": 3,
+    "name": "Meeting Context AI",
+    "version": "1.0",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage",
+        "tabs"
+    ],
+    "host_permissions": [
+        "*://*.zoom.us/*",
+        "*://meet.google.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["*://*.zoom.us/*"],
+            "js": ["zoom-content-script.js"],
+            "run_at": "document_idle",
+            "all_frames": true,
+            "match_origin_as_fallback": true
+        },
+        {
+            "matches": ["*://meet.google.com/*"],
+            "js": ["meet-content-script.js"],
+            "run_at": "document_idle",
+            "all_frames": true,
+            "match_origin_as_fallback": true
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "images/icon-16.png"
+        }
+    },
+    "icons": {
+        "16": "images/icon-16.png"
+    }
+}
