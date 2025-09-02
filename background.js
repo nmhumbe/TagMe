@@ -1,8 +1,8 @@
 let isEnabled = true; // Default state: Enabled
 
 // TODO: Replace with your actual Google Custom Search API Key and Custom Search Engine ID
-const GOOGLE_CSE_API_KEY = "AIzaSyAvZWqVQ7rFwo5Dziq4zcBke2NDTcDe3yA";
-const GOOGLE_CSE_ID = "601248ad5d2784965";
+const GOOGLE_CSE_API_KEY = "Your API";
+const GOOGLE_CSE_ID = "Your ID";
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.sync.set({ isEnabled });
