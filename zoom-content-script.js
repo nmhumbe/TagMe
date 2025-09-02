@@ -28,7 +28,64 @@ function createNameTag(participantName, targetElement) {
     // Store popup reference
     nameTagPopups.set(participantName, nameTag);
 
+    console.log(`Content script: Requesting profile data for ${participantName}`);
+    fetchProfileData(participantName).then(data => {
+        console.log(`Content script: Received profile data for ${participantName}:`, data);
+        if (data) {
+            let jobTitleCompany = '';
+            if (data.jobTitle && data.company) {
+                jobTitleCompany = `<div class="job-title-company">${data.jobTitle} at ${data.company}</div>`;
+            } else if (data.jobTitle) {
+                jobTitleCompany = `<div class="job-title-company">${data.jobTitle}</div>`;
+            } else if (data.company) {
+                jobTitleCompany = `<div class="job-title-company">${data.company}</div>`;
+            }
+
+            let profileLinks = '';
+            if (data.linkedInUrl) {
+                profileLinks += `<a href="${data.linkedInUrl}" target="_blank">LinkedIn</a>`;
+            }
+            if (data.twitterUrl) {
+                profileLinks += ` <a href="${data.twitterUrl}" target="_blank">Twitter</a>`;
+            }
+
+            nameTag.innerHTML = `
+                <strong>${participantName}</strong>
+                ${jobTitleCompany}
+                <div class="profile-links">${profileLinks}</div>
+            `;
+        }
+    });
+
     return nameTag;
+}
+
+async function fetchProfileData(participantName) {
+    const MAX_RETRIES = 3;
+    let retries = 0;
+
+    while (retries < MAX_RETRIES) {
+        try {
+            return await new Promise(resolve => {
+                chrome.runtime.sendMessage({ action: "getProfileData", name: participantName }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.warn("Error sending message to background script (likely context invalidated). Retrying...");
+                        resolve(null); // Resolve with null to trigger retry logic
+                    } else {
+                        console.log(`Content script: Message sent to background for ${participantName}, response received:`, response);
+                        resolve(response.profileData);
+                    }
+                });
+            });
+        } catch (error) {
+            // This catch block handles errors from the Promise itself, not chrome.runtime.lastError
+            console.error("Unexpected error in fetchProfileData:", error);
+            retries++;
+            await new Promise(res => setTimeout(res, 1000)); // Wait before retrying
+        }
+    }
+    console.error(`Failed to fetch profile data for ${participantName} after ${MAX_RETRIES} retries due to Extension context invalidated.`);
+    return null;
 }
 
 // Function to update name tag position and visibility
@@ -68,12 +125,46 @@ function detectZoomParticipants() {
             console.log("Detected participant:", participantName);
             currentParticipants.add(participantName);
 
-            if (!nameTagPopups.has(participantName)) {
+            // Always attempt to fetch profile data and update the name tag
+            let nameTag;
+            if (nameTagPopups.has(participantName)) {
+                nameTag = nameTagPopups.get(participantName);
+            } else {
                 console.log("Creating name tag for:", participantName);
-                const nameTag = createNameTag(participantName, element);
+                nameTag = createNameTag(participantName, element);
                 element.addEventListener('mouseenter', () => updateNameTagPosition(nameTag, element));
                 element.addEventListener('mouseleave', () => hideNameTag(nameTag));
             }
+
+            console.log(`Content script: Requesting profile data for ${participantName}`);
+            fetchProfileData(participantName).then(data => {
+                console.log(`Content script: Received profile data for ${participantName}:`, data);
+                if (data) {
+                    let jobTitleCompany = '';
+                    if (data.jobTitle && data.company) {
+                        jobTitleCompany = `<div class="job-title-company">${data.jobTitle} at ${data.company}</div>`;
+                    } else if (data.jobTitle) {
+                        jobTitleCompany = `<div class="job-title-company">${data.jobTitle}</div>`;
+                    } else if (data.company) {
+                        jobTitleCompany = `<div class="job-title-company">${data.company}</div>`;
+                    }
+
+                    let profileLinks = '';
+                    if (data.linkedInUrl) {
+                        profileLinks += `<a href="${data.linkedInUrl}" target="_blank">LinkedIn</a>`;
+                    }
+                    // Removed GitHub URL as per user request
+                    if (data.twitterUrl) {
+                        profileLinks += ` <a href="${data.twitterUrl}" target="_blank">Twitter</a>`;
+                    }
+
+                    nameTag.innerHTML = `
+                        <strong>${participantName}</strong>
+                        ${jobTitleCompany}
+                        <div class="profile-links">${profileLinks}</div>
+                    `;
+                }
+            });
         }
     });
 
@@ -149,6 +240,20 @@ style.textContent = `
     font-weight: bold;
     display: block;
     margin-bottom: 2px;
+}
+.meeting-context-ai-name-tag .job-title-company {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 5px;
+}
+.meeting-context-ai-name-tag .profile-links a {
+    font-size: 12px;
+    margin-right: 5px;
+    text-decoration: none;
+    color: #007bff;
+}
+.meeting-context-ai-name-tag .profile-links a:hover {
+    text-decoration: underline;
 }
 `;
 document.head.appendChild(style);

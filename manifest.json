@@ -10,7 +10,7 @@
     ],
     "host_permissions": [
         "*://*.zoom.us/*",
-        "*://meet.google.com/*"
+        "https://www.googleapis.com/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -19,13 +19,6 @@
         {
             "matches": ["*://*.zoom.us/*"],
             "js": ["zoom-content-script.js"],
-            "run_at": "document_idle",
-            "all_frames": true,
-            "match_origin_as_fallback": true
-        },
-        {
-            "matches": ["*://meet.google.com/*"],
-            "js": ["meet-content-script.js"],
             "run_at": "document_idle",
             "all_frames": true,
             "match_origin_as_fallback": true
